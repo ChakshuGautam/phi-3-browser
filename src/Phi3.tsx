@@ -5,10 +5,12 @@ import ArrowRightIcon from './components/icons/ArrowRightIcon';
 import StopIcon from './components/icons/StopIcon';
 import Progress from './components/Progress';
 
-const IS_WEBGPU_AVAILABLE = !!navigator.gpu;
+// TODO: Fixme
+// @ts-ignore
+const IS_WEBGPU_AVAILABLE = !!navigator.gpu; //experimental - https://developer.mozilla.org/en-US/docs/Web/API/Navigator/gpu
 const STICKY_SCROLL_THRESHOLD = 120;
 
-function App() {
+function Phi3() {
 
   // Create a reference to the worker object.
   const worker = useRef(null);
@@ -28,7 +30,8 @@ function App() {
   const [tps, setTps] = useState(null);
   const [numTokens, setNumTokens] = useState(null);
 
-  function onEnter(message) {
+  function onEnter(message: any) {
+    // @ts-ignore
     setMessages(prev => [
       ...prev,
       { "role": "user", "content": message },
@@ -45,6 +48,7 @@ function App() {
   function onInterrupt() {
     // NOTE: We do not set isRunning to false here because the worker
     // will send a 'complete' message when it is done.
+    // @ts-ignore
     worker.current.postMessage({ type: 'interrupt' });
   }
 
@@ -52,8 +56,14 @@ function App() {
     if (!textareaRef.current) return;
 
     const target = textareaRef.current;
+
+    // @ts-ignore
     target.style.height = 'auto';
+
+    // @ts-ignore
     const newHeight = Math.min(Math.max(target.scrollHeight, 24), 200);
+
+    // @ts-ignore
     target.style.height = `${newHeight}px`;
   }
 
@@ -61,29 +71,34 @@ function App() {
   useEffect(() => {
     if (!worker.current) {
       // Create the worker if it does not yet exist.
+
+      // @ts-ignore
       worker.current = new Worker(new URL('./worker.js', import.meta.url), {
         type: 'module'
       });
     }
 
     // Create a callback function for messages from the worker thread.
-    const onMessageReceived = (e) => {
+    const onMessageReceived = (e: any) => {
       switch (e.data.status) {
         case 'loading':
           // Model file start load: add a new progress item to the list.
+          // @ts-ignore
           setStatus('loading');
           setLoadingMessage(e.data.data);
           break;
 
         case 'initiate':
+          // @ts-ignore
           setProgressItems(prev => [...prev, e.data]);
           break;
 
         case 'progress':
           // Model file progress: update one of the progress items.
           setProgressItems(
-            prev => prev.map(item => {
-              if (item.file === e.data.file) {
+            // @ts-ignore
+            prev => prev.map((item: any) => {
+              if (item?.file === e.data.file) {
                 return { ...item, ...e.data }
               }
               return item;
@@ -94,17 +109,19 @@ function App() {
         case 'done':
           // Model file loaded: remove the progress item from the list.
           setProgressItems(
-            prev => prev.filter(item => item.file !== e.data.file)
+            prev => prev.filter((item: any) => item.file !== e.data.file)
           );
           break;
 
         case 'ready':
           // Pipeline ready: the worker is ready to accept messages.
+          // @ts-ignore
           setStatus('ready');
           break;
 
         case 'start': {
           // Start generation
+          // @ts-ignore
           setMessages(prev => [...prev, { "role": "assistant", "content": "" }]);
         }
           break;
@@ -118,6 +135,7 @@ function App() {
           setMessages(prev => {
             const cloned = [...prev];
             const last = cloned.at(-1);
+            // @ts-ignore
             cloned[cloned.length - 1] = { ...last, content: last.content + output };
             return cloned;
           });
@@ -132,25 +150,30 @@ function App() {
     };
 
     // Attach the callback function as an event listener.
+    // @ts-ignore
     worker.current.addEventListener('message', onMessageReceived);
 
     // Define a cleanup function for when the component is unmounted.
     return () => {
+      // @ts-ignore
       worker.current.removeEventListener('message', onMessageReceived);
     };
   }, []);
 
   // Send the messages to the worker thread whenever the `messages` state changes.
   useEffect(() => {
+    // @ts-ignore
     if (messages.filter(x => x.role === 'user').length === 0) {
       // No user messages yet: do nothing.
       return;
     }
+    // @ts-ignore
     if (messages.at(-1).role === 'assistant') {
       // Do not update if the last message is from the assistant
       return;
     }
     setTps(null);
+    // @ts-ignore
     worker.current.postMessage({ type: 'generate', data: messages });
   }, [messages, isRunning]);
 
@@ -158,7 +181,9 @@ function App() {
     if (!chatContainerRef.current) return;
     if (isRunning) {
       const element = chatContainerRef.current;
+      // @ts-ignore
       if (element.scrollHeight - element.scrollTop - element.clientHeight < STICKY_SCROLL_THRESHOLD) {
+        // @ts-ignore
         element.scrollTop = element.scrollHeight;
       }
     }
@@ -188,7 +213,9 @@ function App() {
               <button
                 className="border px-4 py-2 rounded-lg bg-blue-400 text-white hover:bg-blue-500 disabled:bg-blue-100 disabled:cursor-not-allowed select-none"
                 onClick={() => {
+                  // @ts-ignore
                   worker.current.postMessage({ type: 'load' });
+                  // @ts-ignore
                   setStatus('loading');
                 }}
                 disabled={status !== null}
@@ -215,16 +242,20 @@ function App() {
           <p className="text-center text-sm min-h-6 text-gray-500 dark:text-gray-300">
             {tps && messages.length > 0 && (<>
               {!isRunning &&
+                // @ts-ignore
                 <span>Generated {numTokens} tokens in {(numTokens / tps).toFixed(2)} seconds&nbsp;&#40;</span>}
               {<>
                 <span className="font-medium text-center mr-1 text-black dark:text-white">
-                  {tps.toFixed(2)}
+                  {// @ts-ignore
+                    tps.toFixed(2)
+                  }
                 </span>
                 <span className="text-gray-500 dark:text-gray-300">tokens/second</span>
               </>}
               {!isRunning && <>
                 <span className="mr-1">&#41;.</span>
                 <span className="underline cursor-pointer" onClick={() => {
+                  // @ts-ignore
                   worker.current.postMessage({ type: 'reset' });
                   setMessages([]);
                 }}>Reset</span>
@@ -238,6 +269,7 @@ function App() {
             ref={textareaRef}
             className="scrollbar-thin w-[550px] dark:bg-gray-700 px-3 py-4 rounded-lg bg-transparent border-none outline-none text-gray-800 disabled:text-gray-400 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 disabled:placeholder-gray-200 resize-none disabled:cursor-not-allowed"
             placeholder="Type your message..."
+            // @ts-ignore
             type="text"
             rows={1}
             value={input}
@@ -249,6 +281,7 @@ function App() {
                 onEnter(input);
               }
             }}
+            // @ts-ignore
             onInput={(e) => setInput(e.target.value)}
           />
           {isRunning
@@ -279,4 +312,4 @@ function App() {
   )
 }
 
-export default App
+export default Phi3

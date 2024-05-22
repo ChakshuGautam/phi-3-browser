@@ -4,9 +4,9 @@ import DOMPurify from 'dompurify';
 import BotIcon from './icons/BotIcon';
 import UserIcon from './icons/UserIcon';
 
-import './Chat.css';
+import '../css/Chat.css';
 
-export default function Chat({ messages }) {
+export default function Chat({ messages }: any) {
     const empty = messages.length === 0;
 
     return (<div className={`flex-1 p-6 max-w-[960px] w-full ${empty ? 'flex flex-col items-center justify-end' : 'space-y-4'}`}>

@@ -1,4 +1,4 @@
-export default function BotIcon(props) {
+export default function BotIcon(props: any) {
     return (
         <svg
             {...props}

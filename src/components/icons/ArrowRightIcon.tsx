@@ -1,4 +1,4 @@
-export default function ArrowRightIcon(props) {
+export default function ArrowRightIcon(props: any) {
     return (
         <svg
             {...props}

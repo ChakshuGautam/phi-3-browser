@@ -1,4 +1,4 @@
-export default function UserIcon(props) {
+export default function UserIcon(props: any) {
     return (
         <svg
             {...props}

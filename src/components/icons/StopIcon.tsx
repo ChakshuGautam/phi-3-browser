@@ -1,4 +1,4 @@
-export default function StopIcon(props) {
+export default function StopIcon(props: any) {
     return (
         <svg
             {...props}

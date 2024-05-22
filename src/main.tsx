@@ -7,7 +7,9 @@ import Whisper from './Whisper'
 import Home from './Home'
 import './index.css'
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+const rootDiv = document.getElementById('root')!;
+
+ReactDOM.createRoot(rootDiv).render(
     <React.StrictMode>
     <BrowserRouter>
       <div>

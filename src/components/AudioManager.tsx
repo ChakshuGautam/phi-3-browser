@@ -21,7 +21,7 @@ function titleCase(str: string) {
 // List of supported languages:
 // https://help.openai.com/en/articles/7031512-whisper-api-faq
 // https://github.com/openai/whisper/blob/248b6cb124225dd263bb9bd32d060b6517e067f8/whisper/tokenizer.py#L79
-const LANGUAGES = {
+const  LANGUAGES: { [key: string]: string } = {
     en: "english",
     zh: "chinese",
     de: "german",
@@ -131,6 +131,13 @@ export enum AudioSource {
 
 export function AudioManager(props: { transcriber: Transcriber }) {
     const [progress, setProgress] = useState<number | undefined>(undefined);
+     const [selectedLanguage, setSelectedLanguage] = useState('en');
+       const onLanguageChange = (language:any) => {
+        setSelectedLanguage(language); 
+        props.transcriber.setLanguage(language);  
+    };
+
+     
     const [audioData, setAudioData] = useState<
         | {
               buffer: AudioBuffer;
@@ -161,6 +168,8 @@ export function AudioManager(props: { transcriber: Transcriber }) {
         const blobUrl = URL.createObjectURL(
             new Blob([data], { type: "audio/*" }),
         );
+        
+        
         const decoded = await audioCTX.decodeAudioData(data);
         setAudioData({
             buffer: decoded,
@@ -274,6 +283,13 @@ export function AudioManager(props: { transcriber: Transcriber }) {
                                     setAudioFromRecording(e);
                                 }}
                             />
+                               <LanguageSelector
+                selectedLanguage={selectedLanguage}
+                onLanguageChange={onLanguageChange}
+                transcriber={props.transcriber}  
+            />
+              
+                
                         </>
                     )}
                 </div>
@@ -447,7 +463,7 @@ function SettingsModal(props: {
                             </label>
                         </div>
                     </div>
-                    {props.transcriber.multilingual && (
+                    {/* {props.transcriber.multilingual && (
                         <>
                             <label>Select the source language.</label>
                             <select
@@ -481,7 +497,7 @@ function SettingsModal(props: {
                                 </option>
                             </select>
                         </>
-                    )}
+                    )} */}
                 </>
             }
             onClose={props.onClose}
@@ -789,5 +805,26 @@ function MicrophoneIcon() {
                 d='M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z'
             />
         </svg>
+    );
+}
+
+ function LanguageSelector(props:any ) {
+    const { selectedLanguage, onLanguageChange} = props;
+
+    return (
+        <select
+            value={selectedLanguage}
+            onChange={(e) => {
+                const language = e.target.value;
+                onLanguageChange(language);  
+            }}
+            className="bg-white border border-gray-300 rounded-lg py-1 px-2 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+        >
+            {Object.keys(LANGUAGES).map((key, i) => (
+                <option key={key} value={key}>
+                    {titleCase(LANGUAGES[key])}
+                </option>
+            ))}
+        </select>
     );
 }

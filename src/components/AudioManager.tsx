@@ -9,6 +9,7 @@ import { Transcriber } from "../hooks/useTranscriber";
 import Progress from "./Progress-Old";
 import AudioRecorder from "./AudioRecorder";
 
+
 function titleCase(str: string) {
     str = str.toLowerCase();
     return (str.match(/\w+.?/g) || [])
@@ -23,7 +24,8 @@ function titleCase(str: string) {
 // https://github.com/openai/whisper/blob/248b6cb124225dd263bb9bd32d060b6517e067f8/whisper/tokenizer.py#L79
 const  LANGUAGES: { [key: string]: string } = {
     en: "english",
-    zh: "chinese",
+    hi: "hindi",
+     zh: "chinese",
     de: "german",
     es: "spanish/castilian",
     ru: "russian",
@@ -39,7 +41,6 @@ const  LANGUAGES: { [key: string]: string } = {
     sv: "swedish",
     it: "italian",
     id: "indonesian",
-    hi: "hindi",
     fi: "finnish",
     vi: "vietnamese",
     he: "hebrew",

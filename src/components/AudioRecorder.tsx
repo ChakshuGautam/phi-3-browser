@@ -1,3 +1,5 @@
+
+
 import { useState, useEffect, useRef } from "react";
 
 import { formatAudioTimestamp } from "../utils/AudioUtils";
@@ -25,6 +27,7 @@ export default function AudioRecorder(props: {
     const [recording, setRecording] = useState(false);
     const [duration, setDuration] = useState(0);
     const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
+const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
 
     const streamRef = useRef<MediaStream | null>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -118,6 +121,7 @@ export default function AudioRecorder(props: {
         }
     };
 
+    
     return (
         <div className='flex flex-col justify-center items-center'>
             <button

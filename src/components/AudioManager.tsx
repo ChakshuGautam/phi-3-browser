@@ -1,3 +1,4 @@
+ 
 import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import Modal from "./modal/Modal";
@@ -25,104 +26,9 @@ function titleCase(str: string) {
 const  LANGUAGES: { [key: string]: string } = {
     en: "english",
     hi: "hindi",
-     zh: "chinese",
-    de: "german",
-    es: "spanish/castilian",
-    ru: "russian",
-    ko: "korean",
-    fr: "french",
-    ja: "japanese",
-    pt: "portuguese",
-    tr: "turkish",
-    pl: "polish",
-    ca: "catalan/valencian",
-    nl: "dutch/flemish",
-    ar: "arabic",
-    sv: "swedish",
-    it: "italian",
-    id: "indonesian",
-    fi: "finnish",
-    vi: "vietnamese",
-    he: "hebrew",
-    uk: "ukrainian",
-    el: "greek",
-    ms: "malay",
-    cs: "czech",
-    ro: "romanian/moldavian/moldovan",
-    da: "danish",
-    hu: "hungarian",
-    ta: "tamil",
-    no: "norwegian",
-    th: "thai",
-    ur: "urdu",
-    hr: "croatian",
-    bg: "bulgarian",
-    lt: "lithuanian",
-    la: "latin",
-    mi: "maori",
-    ml: "malayalam",
-    cy: "welsh",
-    sk: "slovak",
-    te: "telugu",
-    fa: "persian",
-    lv: "latvian",
-    bn: "bengali",
-    sr: "serbian",
-    az: "azerbaijani",
-    sl: "slovenian",
-    kn: "kannada",
-    et: "estonian",
-    mk: "macedonian",
-    br: "breton",
-    eu: "basque",
-    is: "icelandic",
-    hy: "armenian",
-    ne: "nepali",
-    mn: "mongolian",
-    bs: "bosnian",
-    kk: "kazakh",
-    sq: "albanian",
-    sw: "swahili",
-    gl: "galician",
-    mr: "marathi",
-    pa: "punjabi/panjabi",
-    si: "sinhala/sinhalese",
-    km: "khmer",
-    sn: "shona",
-    yo: "yoruba",
-    so: "somali",
-    af: "afrikaans",
-    oc: "occitan",
-    ka: "georgian",
-    be: "belarusian",
-    tg: "tajik",
-    sd: "sindhi",
-    gu: "gujarati",
-    am: "amharic",
-    yi: "yiddish",
-    lo: "lao",
-    uz: "uzbek",
-    fo: "faroese",
-    ht: "haitian creole/haitian",
-    ps: "pashto/pushto",
-    tk: "turkmen",
-    nn: "nynorsk",
-    mt: "maltese",
-    sa: "sanskrit",
-    lb: "luxembourgish/letzeburgesch",
-    my: "myanmar/burmese",
-    bo: "tibetan",
-    tl: "tagalog",
-    mg: "malagasy",
-    as: "assamese",
-    tt: "tatar",
-    haw: "hawaiian",
-    ln: "lingala",
-    ha: "hausa",
-    ba: "bashkir",
-    jw: "javanese",
-    su: "sundanese",
+ 
 };
+
 
 export enum AudioSource {
     URL = "URL",
@@ -151,6 +57,7 @@ export function AudioManager(props: { transcriber: Transcriber }) {
     const [audioDownloadUrl, setAudioDownloadUrl] = useState<
         string | undefined
     >(undefined);
+
 
     const isAudioLoading = progress !== undefined;
 
@@ -464,41 +371,7 @@ function SettingsModal(props: {
                             </label>
                         </div>
                     </div>
-                    {/* {props.transcriber.multilingual && (
-                        <>
-                            <label>Select the source language.</label>
-                            <select
-                                className='mt-1 mb-3 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500'
-                                defaultValue={props.transcriber.language}
-                                onChange={(e) => {
-                                    props.transcriber.setLanguage(
-                                        e.target.value,
-                                    );
-                                }}
-                            >
-                                {Object.keys(LANGUAGES).map((key, i) => (
-                                    <option key={key} value={key}>
-                                        {names[i]}
-                                    </option>
-                                ))}
-                            </select>
-                            <label>Select the task to perform.</label>
-                            <select
-                                className='mt-1 mb-3 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500'
-                                defaultValue={props.transcriber.subtask}
-                                onChange={(e) => {
-                                    props.transcriber.setSubtask(
-                                        e.target.value,
-                                    );
-                                }}
-                            >
-                                <option value={"transcribe"}>Transcribe</option>
-                                <option value={"translate"}>
-                                    Translate (to English)
-                                </option>
-                            </select>
-                        </>
-                    )} */}
+            
                 </>
             }
             onClose={props.onClose}

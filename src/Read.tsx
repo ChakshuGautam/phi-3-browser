@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 function Read() {
   const navigate = useNavigate();
 
-  const handleLanguageChange = (e) => {
+  const handleLanguageChange = (e: { target: { value: any; }; }) => {
     const selectedLanguage = e.target.value;
     navigate("/read-along/whisper", { state: { language: selectedLanguage } });
   };

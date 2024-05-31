@@ -1,3 +1,4 @@
+ 
 import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import Modal from "./modal/Modal";
@@ -8,6 +9,7 @@ import Constants from "../utils/Constants";
 import { Transcriber } from "../hooks/useTranscriber";
 import Progress from "./Progress-Old";
 import AudioRecorder from "./AudioRecorder";
+
 
 function titleCase(str: string) {
     str = str.toLowerCase();
@@ -21,107 +23,12 @@ function titleCase(str: string) {
 // List of supported languages:
 // https://help.openai.com/en/articles/7031512-whisper-api-faq
 // https://github.com/openai/whisper/blob/248b6cb124225dd263bb9bd32d060b6517e067f8/whisper/tokenizer.py#L79
-const LANGUAGES = {
+const  LANGUAGES: { [key: string]: string } = {
     en: "english",
-    zh: "chinese",
-    de: "german",
-    es: "spanish/castilian",
-    ru: "russian",
-    ko: "korean",
-    fr: "french",
-    ja: "japanese",
-    pt: "portuguese",
-    tr: "turkish",
-    pl: "polish",
-    ca: "catalan/valencian",
-    nl: "dutch/flemish",
-    ar: "arabic",
-    sv: "swedish",
-    it: "italian",
-    id: "indonesian",
     hi: "hindi",
-    fi: "finnish",
-    vi: "vietnamese",
-    he: "hebrew",
-    uk: "ukrainian",
-    el: "greek",
-    ms: "malay",
-    cs: "czech",
-    ro: "romanian/moldavian/moldovan",
-    da: "danish",
-    hu: "hungarian",
-    ta: "tamil",
-    no: "norwegian",
-    th: "thai",
-    ur: "urdu",
-    hr: "croatian",
-    bg: "bulgarian",
-    lt: "lithuanian",
-    la: "latin",
-    mi: "maori",
-    ml: "malayalam",
-    cy: "welsh",
-    sk: "slovak",
-    te: "telugu",
-    fa: "persian",
-    lv: "latvian",
-    bn: "bengali",
-    sr: "serbian",
-    az: "azerbaijani",
-    sl: "slovenian",
-    kn: "kannada",
-    et: "estonian",
-    mk: "macedonian",
-    br: "breton",
-    eu: "basque",
-    is: "icelandic",
-    hy: "armenian",
-    ne: "nepali",
-    mn: "mongolian",
-    bs: "bosnian",
-    kk: "kazakh",
-    sq: "albanian",
-    sw: "swahili",
-    gl: "galician",
-    mr: "marathi",
-    pa: "punjabi/panjabi",
-    si: "sinhala/sinhalese",
-    km: "khmer",
-    sn: "shona",
-    yo: "yoruba",
-    so: "somali",
-    af: "afrikaans",
-    oc: "occitan",
-    ka: "georgian",
-    be: "belarusian",
-    tg: "tajik",
-    sd: "sindhi",
-    gu: "gujarati",
-    am: "amharic",
-    yi: "yiddish",
-    lo: "lao",
-    uz: "uzbek",
-    fo: "faroese",
-    ht: "haitian creole/haitian",
-    ps: "pashto/pushto",
-    tk: "turkmen",
-    nn: "nynorsk",
-    mt: "maltese",
-    sa: "sanskrit",
-    lb: "luxembourgish/letzeburgesch",
-    my: "myanmar/burmese",
-    bo: "tibetan",
-    tl: "tagalog",
-    mg: "malagasy",
-    as: "assamese",
-    tt: "tatar",
-    haw: "hawaiian",
-    ln: "lingala",
-    ha: "hausa",
-    ba: "bashkir",
-    jw: "javanese",
-    su: "sundanese",
+ 
 };
+
 
 export enum AudioSource {
     URL = "URL",
@@ -131,6 +38,13 @@ export enum AudioSource {
 
 export function AudioManager(props: { transcriber: Transcriber }) {
     const [progress, setProgress] = useState<number | undefined>(undefined);
+     const [selectedLanguage, setSelectedLanguage] = useState('en');
+       const onLanguageChange = (language:any) => {
+        setSelectedLanguage(language); 
+        props.transcriber.setLanguage(language);  
+    };
+
+     
     const [audioData, setAudioData] = useState<
         | {
               buffer: AudioBuffer;
@@ -143,6 +57,7 @@ export function AudioManager(props: { transcriber: Transcriber }) {
     const [audioDownloadUrl, setAudioDownloadUrl] = useState<
         string | undefined
     >(undefined);
+
 
     const isAudioLoading = progress !== undefined;
 
@@ -161,6 +76,8 @@ export function AudioManager(props: { transcriber: Transcriber }) {
         const blobUrl = URL.createObjectURL(
             new Blob([data], { type: "audio/*" }),
         );
+        
+        
         const decoded = await audioCTX.decodeAudioData(data);
         setAudioData({
             buffer: decoded,
@@ -274,6 +191,13 @@ export function AudioManager(props: { transcriber: Transcriber }) {
                                     setAudioFromRecording(e);
                                 }}
                             />
+                               <LanguageSelector
+                selectedLanguage={selectedLanguage}
+                onLanguageChange={onLanguageChange}
+                transcriber={props.transcriber}  
+            />
+              
+                
                         </>
                     )}
                 </div>
@@ -447,41 +371,7 @@ function SettingsModal(props: {
                             </label>
                         </div>
                     </div>
-                    {props.transcriber.multilingual && (
-                        <>
-                            <label>Select the source language.</label>
-                            <select
-                                className='mt-1 mb-3 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500'
-                                defaultValue={props.transcriber.language}
-                                onChange={(e) => {
-                                    props.transcriber.setLanguage(
-                                        e.target.value,
-                                    );
-                                }}
-                            >
-                                {Object.keys(LANGUAGES).map((key, i) => (
-                                    <option key={key} value={key}>
-                                        {names[i]}
-                                    </option>
-                                ))}
-                            </select>
-                            <label>Select the task to perform.</label>
-                            <select
-                                className='mt-1 mb-3 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500'
-                                defaultValue={props.transcriber.subtask}
-                                onChange={(e) => {
-                                    props.transcriber.setSubtask(
-                                        e.target.value,
-                                    );
-                                }}
-                            >
-                                <option value={"transcribe"}>Transcribe</option>
-                                <option value={"translate"}>
-                                    Translate (to English)
-                                </option>
-                            </select>
-                        </>
-                    )}
+            
                 </>
             }
             onClose={props.onClose}
@@ -789,5 +679,26 @@ function MicrophoneIcon() {
                 d='M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z'
             />
         </svg>
+    );
+}
+
+ function LanguageSelector(props:any ) {
+    const { selectedLanguage, onLanguageChange} = props;
+
+    return (
+        <select
+            value={selectedLanguage}
+            onChange={(e) => {
+                const language = e.target.value;
+                onLanguageChange(language);  
+            }}
+            className="bg-white border border-gray-300 rounded-lg py-1 px-2 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+        >
+            {Object.keys(LANGUAGES).map((key, i) => (
+                <option key={key} value={key}>
+                    {titleCase(LANGUAGES[key])}
+                </option>
+            ))}
+        </select>
     );
 }

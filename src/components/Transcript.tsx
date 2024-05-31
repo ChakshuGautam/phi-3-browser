@@ -1,13 +1,14 @@
-import { useRef, useEffect } from "react";
-
+import { useRef, useEffect, useState } from "react";
 import { TranscriberData } from "../hooks/useTranscriber";
-import { formatAudioTimestamp } from "../utils/AudioUtils";
 
 interface Props {
     transcribedData: TranscriberData | undefined;
 }
 
 export default function Transcript({ transcribedData }: Props) {
+    const [transcript, setTranscript] = useState<string>("");
+    const [comparisonResult, setComparisonResult] = useState<string>("");
+    const [verificationText, setVerificationText] = useState<string>("");
     const divRef = useRef<HTMLDivElement>(null);
 
     const saveBlob = (blob: Blob, filename: string) => {
@@ -18,78 +19,89 @@ export default function Transcript({ transcribedData }: Props) {
         link.click();
         URL.revokeObjectURL(url);
     };
-    const exportTXT = () => {
-        let chunks = transcribedData?.chunks ?? [];
-        let text = chunks
-            .map((chunk) => chunk.text)
-            .join("")
-            .trim();
 
-        const blob = new Blob([text], { type: "text/plain" });
+    const exportTXT = () => {
+        const blob = new Blob([transcript], { type: "text/plain" });
         saveBlob(blob, "transcript.txt");
     };
+
     const exportJSON = () => {
         let jsonData = JSON.stringify(transcribedData?.chunks ?? [], null, 2);
-
-        // post-process the JSON to make it more readable
         const regex = /(    "timestamp": )\[\s+(\S+)\s+(\S+)\s+\]/gm;
         jsonData = jsonData.replace(regex, "$1[$2 $3]");
-
         const blob = new Blob([jsonData], { type: "application/json" });
         saveBlob(blob, "transcript.json");
     };
 
-    // Scroll to the bottom when the component updates
-    useEffect(() => {
-        if (divRef.current) {
-            const diff = Math.abs(
-                divRef.current.offsetHeight +
-                    divRef.current.scrollTop -
-                    divRef.current.scrollHeight,
-            );
+    const handleVerificationTextChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setVerificationText(event.target.value);
+    };
 
-            if (diff <= 64) {
-                // We're close enough to the bottom, so scroll to the bottom
+    useEffect(() => {
+        if (transcribedData) {
+            const chunks = transcribedData.chunks.map((chunk) => chunk.text);
+            const updatedTranscript = chunks.join(" ").trim();
+            setTranscript(updatedTranscript);
+
+            // Scroll to bottom to show the latest transcript
+            if (divRef.current) {
                 divRef.current.scrollTop = divRef.current.scrollHeight;
             }
+
+            // Compare transcribed text with verification text (ignoring case)
+            const verificationWords = verificationText.toLowerCase().split(/\s+/);
+            const transcribedWords = updatedTranscript.toLowerCase().split(/\s+/);
+
+            let resultHTML = "";
+
+            verificationWords.forEach((word, index) => {
+                if (transcribedWords[index] === word) {
+                    resultHTML += `<span style="color: green">${word} </span>`;
+                } else {
+                    resultHTML += `<span style="color: red">${word} </span>`;
+                }
+            });
+
+            setComparisonResult(resultHTML);
         }
-    });
+    }, [transcribedData, verificationText]);
 
     return (
-        <div
-            ref={divRef}
-            className='w-full flex flex-col my-2 p-4 max-h-[20rem] overflow-y-auto'
-        >
-            {transcribedData?.chunks &&
-                transcribedData.chunks.map((chunk, i) => (
-                    <div
-                        key={`${i}-${chunk.text}`}
-                        className='w-full flex flex-row mb-2 bg-white rounded-lg p-4 shadow-xl shadow-black/5 ring-1 ring-slate-700/10'
-                    >
-                        <div className='mr-5 text-black'>
-                            {formatAudioTimestamp(chunk.timestamp[0])}
-                        </div>
-                        <div className='text-black'>
-                            {chunk.text}
-                        </div>
-                    </div>
-                ))}
+        <div className="w-full flex flex-col my-2 p-4 max-h-[20rem] overflow-hidden shadow-md">
+            {transcribedData && (
+                <div className="bg-white rounded-lg">
+                    <p ref={divRef} className="text-black p-4">
+                        {transcript}
+                    </p>
+                </div>
+            )}
             {transcribedData && !transcribedData.isBusy && (
-                <div className='w-full text-right'>
+                <div className="w-full text-right">
                     <button
                         onClick={exportTXT}
-                        className='text-white bg-green-500 hover:bg-green-600 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-4 py-2 text-center mr-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800 inline-flex items-center'
+                        className="text-white bg-green-500 hover:bg-green-600 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-4 py-2 text-center mr-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800 inline-flex items-center"
                     >
                         Export TXT
                     </button>
                     <button
                         onClick={exportJSON}
-                        className='text-white bg-green-500 hover:bg-green-600 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-4 py-2 text-center mr-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800 inline-flex items-center'
+                        className="text-white bg-green-500 hover:bg-green-600 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-4 py-2 text-center mr-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800 inline-flex items-center"
                     >
                         Export JSON
                     </button>
                 </div>
             )}
+            <div className="bg-white text-black rounded-lg mt-4 p-4">
+                <h1 className="font-bold">Text Area</h1>
+                <textarea
+                    value={verificationText}
+                    onChange={handleVerificationTextChange}
+                    className="w-full h-24 border-gray-300 rounded-md p-2 focus:outline-none focus:ring focus:border-blue-300"
+                    placeholder="Enter text for verification..."
+                />
+                <h2 className="text-xl text-black font-bold mb-2">Comparison Result</h2>
+                <div dangerouslySetInnerHTML={{ __html: comparisonResult }} />
+            </div>
         </div>
     );
 }

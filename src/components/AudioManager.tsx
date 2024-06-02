@@ -172,7 +172,7 @@ export function AudioManager(props: { transcriber: Transcriber }) {
     );
 }
 
-// The rest of the components (SettingsTile, UrlTile, FileTile, etc.) remain unchanged
+ 
 
 
 

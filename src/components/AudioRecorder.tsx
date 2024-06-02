@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef } from "react";
-
+import { useState, useEffect, useRef, useCallback } from "react";
 import { formatAudioTimestamp } from "../utils/AudioUtils";
 import { webmFixDuration } from "../utils/BlobFix";
 
@@ -11,104 +10,96 @@ function getMimeType() {
         "audio/wav",
         "audio/aac",
     ];
-    for (let i = 0; i < types.length; i++) {
-        if (MediaRecorder.isTypeSupported(types[i])) {
-            return types[i];
+    for (let type of types) {
+        if (MediaRecorder.isTypeSupported(type)) {
+            return type;
         }
     }
     return undefined;
 }
 
-export default function AudioRecorder(props: {
-    onRecordingComplete: (blob: Blob) => void;
-}) {
+export default function AudioRecorder(props: { onTranscriptionComplete: (transcription: string) => void; }) {
     const [recording, setRecording] = useState(false);
     const [duration, setDuration] = useState(0);
-    const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
 
     const streamRef = useRef<MediaStream | null>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<Blob[]>([]);
-
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
-    const startRecording = async () => {
-        // Reset recording (if any)
-        setRecordedBlob(null);
-
-        let startTime = Date.now();
-
+    const startRecording = useCallback(async () => {
         try {
             if (!streamRef.current) {
-                streamRef.current = await navigator.mediaDevices.getUserMedia({
-                    audio: true,
-                });
+                streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
             }
 
             const mimeType = getMimeType();
-            const mediaRecorder = new MediaRecorder(streamRef.current, {
-                mimeType,
-            });
+            if (!mimeType) throw new Error("No supported audio MIME type found");
 
+            const mediaRecorder = new MediaRecorder(streamRef.current, { mimeType });
             mediaRecorderRef.current = mediaRecorder;
 
-            mediaRecorder.addEventListener("dataavailable", async (event) => {
+            mediaRecorder.addEventListener("dataavailable", (event) => {
                 if (event.data.size > 0) {
                     chunksRef.current.push(event.data);
                 }
-                if (mediaRecorder.state === "inactive") {
-                    const duration = Date.now() - startTime;
-
-                    // Received a stop event
-                    let blob = new Blob(chunksRef.current, { type: mimeType });
-
-                    if (mimeType === "audio/webm") {
-                        blob = await webmFixDuration(blob, duration, blob.type);
-                    }
-
-                    setRecordedBlob(blob);
-                    props.onRecordingComplete(blob);
-
-                    chunksRef.current = [];
-                }
             });
+
             mediaRecorder.start();
             setRecording(true);
         } catch (error) {
             console.error("Error accessing microphone:", error);
         }
-    };
+    }, []);
 
-    const stopRecording = () => {
-        if (
-            mediaRecorderRef.current &&
-            mediaRecorderRef.current.state === "recording"
-        ) {
-            mediaRecorderRef.current.stop(); // set state to inactive
-            setDuration(0);
+    const stopRecording = useCallback(() => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+            mediaRecorderRef.current.stop();
             setRecording(false);
+        }
+    }, []);
+
+    const sendForTranscription = async (blob: Blob) => {
+        const formData = new FormData();
+        formData.append('file', blob, 'audio.webm');
+
+        try {
+            const response = await fetch('/transcribe', {
+                method: 'POST',
+                body: formData,
+            });
+            const transcription = await response.json();
+            props.onTranscriptionComplete(transcription);
+        } catch (error) {
+            console.error("Transcription error:", error);
         }
     };
 
     useEffect(() => {
-        let stream: MediaStream | null = null;
-
+        let timer: NodeJS.Timeout;
         if (recording) {
-            const timer = setInterval(() => {
-                setDuration((prevDuration) => prevDuration + 1);
+            timer = setInterval(async () => {
+                if (chunksRef.current.length > 0) {
+                    const blob = new Blob(chunksRef.current, { type: mediaRecorderRef.current?.mimeType });
+                    chunksRef.current = [];
+                    await sendForTranscription(blob);
+                }
+                setDuration((prev) => prev + 1);
             }, 1000);
-
-            return () => {
-                clearInterval(timer);
-            };
         }
 
         return () => {
-            if (stream) {
-                stream.getTracks().forEach((track) => track.stop());
-            }
+            if (timer) clearInterval(timer);
         };
     }, [recording]);
+
+    useEffect(() => {
+        return () => {
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach((track) => track.stop());
+            }
+        };
+    }, []);
 
     const handleToggleRecording = () => {
         if (recording) {
@@ -123,23 +114,16 @@ export default function AudioRecorder(props: {
             <button
                 type='button'
                 className={`m-2 inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 transition-all duration-200 ${
-                    recording
-                        ? "bg-red-500 hover:bg-red-600"
-                        : "bg-green-500 hover:bg-green-600"
+                    recording ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600"
                 }`}
                 onClick={handleToggleRecording}
             >
-                {recording
-                    ? `Stop Recording (${formatAudioTimestamp(duration)})`
-                    : "Start Recording"}
+                {recording ? `Stop Recording (${formatAudioTimestamp(duration)})` : "Start Recording"}
             </button>
 
-            {recordedBlob && (
-                <audio className='w-full' ref={audioRef} controls>
-                    <source
-                        src={URL.createObjectURL(recordedBlob)}
-                        type={recordedBlob.type}
-                    />
+            {recording && (
+                <audio className='w-full' ref={audioRef} controls autoPlay>
+                    <source src={URL.createObjectURL(new Blob(chunksRef.current, { type: 'audio/webm' }))} type='audio/webm' />
                 </audio>
             )}
         </div>

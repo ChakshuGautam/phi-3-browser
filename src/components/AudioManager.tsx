@@ -1,5 +1,5 @@
  
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import axios from "axios";
 import Modal from "./modal/Modal";
 import { UrlInput } from "./modal/UrlInput";
@@ -10,7 +10,6 @@ import { Transcriber } from "../hooks/useTranscriber";
 import Progress from "./Progress-Old";
 import AudioRecorder from "./AudioRecorder";
 
-
 function titleCase(str: string) {
     str = str.toLowerCase();
     return (str.match(/\w+.?/g) || [])
@@ -20,15 +19,14 @@ function titleCase(str: string) {
         .join("");
 }
 
+
 // List of supported languages:
 // https://help.openai.com/en/articles/7031512-whisper-api-faq
 // https://github.com/openai/whisper/blob/248b6cb124225dd263bb9bd32d060b6517e067f8/whisper/tokenizer.py#L79
 const  LANGUAGES: { [key: string]: string } = {
     en: "english",
     hi: "hindi",
- 
 };
-
 
 export enum AudioSource {
     URL = "URL",
@@ -38,121 +36,50 @@ export enum AudioSource {
 
 export function AudioManager(props: { transcriber: Transcriber }) {
     const [progress, setProgress] = useState<number | undefined>(undefined);
-     const [selectedLanguage, setSelectedLanguage] = useState('en');
-       const onLanguageChange = (language:any) => {
+    const [selectedLanguage, setSelectedLanguage] = useState('en');
+    const [audioData, setAudioData] = useState<any>(undefined);
+    const [audioDownloadUrl, setAudioDownloadUrl] = useState<string | undefined>(undefined);
+    const [transcriptions, setTranscriptions] = useState<string[]>([]);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const [isRecording, setIsRecording] = useState(false);
+
+    const onLanguageChange = (language: any) => {
         setSelectedLanguage(language); 
         props.transcriber.setLanguage(language);  
     };
 
-     
-    const [audioData, setAudioData] = useState<
-        | {
-              buffer: AudioBuffer;
-              url: string;
-              source: AudioSource;
-              mimeType: string;
-          }
-        | undefined
-    >(undefined);
-    const [audioDownloadUrl, setAudioDownloadUrl] = useState<
-        string | undefined
-    >(undefined);
+    const startRecording = async () => {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = mediaRecorder;
+        mediaRecorder.ondataavailable = async (event) => {
+            if (event.data.size > 0) {
+                const chunk = event.data;
+                processAudioChunk(chunk);
+            }
+        };
+        mediaRecorder.start(5000); 
+        setIsRecording(true);
+    };
 
+    const stopRecording = () => {
+        if (mediaRecorderRef.current) {
+            mediaRecorderRef.current.stop();
+        }
+        setIsRecording(false);
+    };
 
-    const isAudioLoading = progress !== undefined;
+    const processAudioChunk = async (chunk: Blob) => {
+    const arrayBuffer = await chunk.arrayBuffer();
+    const audioCTX = new AudioContext({ sampleRate: Constants.SAMPLING_RATE });
+    const decoded = await audioCTX.decodeAudioData(arrayBuffer);
+    props.transcriber.start(decoded);  
+};
 
     const resetAudio = () => {
         setAudioData(undefined);
         setAudioDownloadUrl(undefined);
     };
-
-    const setAudioFromDownload = async (
-        data: ArrayBuffer,
-        mimeType: string,
-    ) => {
-        const audioCTX = new AudioContext({
-            sampleRate: Constants.SAMPLING_RATE,
-        });
-        const blobUrl = URL.createObjectURL(
-            new Blob([data], { type: "audio/*" }),
-        );
-        
-        
-        const decoded = await audioCTX.decodeAudioData(data);
-        setAudioData({
-            buffer: decoded,
-            url: blobUrl,
-            source: AudioSource.URL,
-            mimeType: mimeType,
-        });
-    };
-
-    const setAudioFromRecording = async (data: Blob) => {
-        resetAudio();
-        setProgress(0);
-        const blobUrl = URL.createObjectURL(data);
-        const fileReader = new FileReader();
-        fileReader.onprogress = (event) => {
-            setProgress(event.loaded / event.total || 0);
-        };
-        fileReader.onloadend = async () => {
-            const audioCTX = new AudioContext({
-                sampleRate: Constants.SAMPLING_RATE,
-            });
-            const arrayBuffer = fileReader.result as ArrayBuffer;
-            const decoded = await audioCTX.decodeAudioData(arrayBuffer);
-            setProgress(undefined);
-            setAudioData({
-                buffer: decoded,
-                url: blobUrl,
-                source: AudioSource.RECORDING,
-                mimeType: data.type,
-            });
-        };
-        fileReader.readAsArrayBuffer(data);
-    };
-
-    const downloadAudioFromUrl = async (
-        requestAbortController: AbortController,
-    ) => {
-        if (audioDownloadUrl) {
-            try {
-                setAudioData(undefined);
-                setProgress(0);
-                const { data, headers } = (await axios.get(audioDownloadUrl, {
-                    signal: requestAbortController.signal,
-                    responseType: "arraybuffer",
-                    onDownloadProgress(progressEvent: any) {
-                        setProgress(progressEvent.progress || 0);
-                    },
-                })) as {
-                    data: ArrayBuffer;
-                    headers: { "content-type": string };
-                };
-
-                let mimeType = headers["content-type"];
-                if (!mimeType || mimeType === "audio/wave") {
-                    mimeType = "audio/wav";
-                }
-                setAudioFromDownload(data, mimeType);
-            } catch (error) {
-                console.log("Request failed or aborted", error);
-            } finally {
-                setProgress(undefined);
-            }
-        }
-    };
-
-    // When URL changes, download audio
-    useEffect(() => {
-        if (audioDownloadUrl) {
-            const requestAbortController = new AbortController();
-            downloadAudioFromUrl(requestAbortController);
-            return () => {
-                requestAbortController.abort();
-            };
-        }
-    }, [audioDownloadUrl]);
 
     return (
         <>
@@ -183,73 +110,71 @@ export function AudioManager(props: { transcriber: Transcriber }) {
                     {navigator.mediaDevices && (
                         <>
                             <VerticalBar />
-                            <RecordTile
+                            <Tile
                                 icon={<MicrophoneIcon />}
-                                text={"Record"}
-                                setAudioData={(e) => {
-                                    props.transcriber.onInputChange();
-                                    setAudioFromRecording(e);
+                                text={isRecording ? "Stop Recording" : "Record"}
+                                onClick={() => {
+                                    isRecording ? stopRecording() : startRecording();
                                 }}
                             />
-                               <LanguageSelector
-                selectedLanguage={selectedLanguage}
-                onLanguageChange={onLanguageChange}
-                transcriber={props.transcriber}  
-            />
-              
-                
+                            <LanguageSelector
+                                selectedLanguage={selectedLanguage}
+                                onLanguageChange={onLanguageChange}
+                                transcriber={props.transcriber}
+                            />
                         </>
                     )}
                 </div>
-                {
-                    <AudioDataBar
-                        progress={isAudioLoading ? progress : +!!audioData}
-                    />
-                }
-            </div>
-            {audioData && (
-                <>
-                    <AudioPlayer
-                        audioUrl={audioData.url}
-                        mimeType={audioData.mimeType}
-                    />
-
-                    <div className='relative w-full flex justify-center items-center'>
-                        <TranscribeButton
-                            onClick={() => {
-                                props.transcriber.start(audioData.buffer);
-                            }}
-                            isModelLoading={props.transcriber.isModelLoading}
-                            // isAudioLoading ||
-                            isTranscribing={props.transcriber.isBusy}
+                {audioData && (
+                    <>
+                        <AudioPlayer
+                            audioUrl={audioData.url}
+                            mimeType={audioData.mimeType}
                         />
-
-                        <SettingsTile
-                            className='absolute right-4'
-                            transcriber={props.transcriber}
-                            icon={<SettingsIcon />}
-                        />
-                    </div>
-                    {props.transcriber.progressItems.length > 0 && (
-                        <div className='relative z-10 p-4 w-full'>
-                            <label>
-                                Loading model files... (only run once)
-                            </label>
-                            {props.transcriber.progressItems.map((data) => (
-                                <div key={data.file}>
-                                    <Progress
-                                        text={data.file}
-                                        percentage={data.progress}
-                                    />
-                                </div>
-                            ))}
+                        <div className='relative w-full flex justify-center items-center'>
+                            <TranscribeButton
+                                onClick={() => {
+                                    props.transcriber.start(audioData.buffer);
+                                }}
+                                isModelLoading={props.transcriber.isModelLoading}
+                                isTranscribing={props.transcriber.isBusy}
+                            />
+                            <SettingsTile
+                                className='absolute right-4'
+                                transcriber={props.transcriber}
+                                icon={<SettingsIcon />}
+                            />
                         </div>
-                    )}
-                </>
-            )}
+                        {props.transcriber.progressItems.length > 0 && (
+                            <div className='relative z-10 p-4 w-full'>
+                                <label>
+                                    Loading model files... (only run once)
+                                </label>
+                                {props.transcriber.progressItems.map((data) => (
+                                    <div key={data.file}>
+                                        <Progress
+                                            text={data.file}
+                                            percentage={data.progress}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </>
+                )}
+                <div>
+                    {transcriptions.map((text, index) => (
+                        <p key={index}>{text}</p>
+                    ))}
+                </div>
+            </div>
         </>
     );
 }
+
+// The rest of the components (SettingsTile, UrlTile, FileTile, etc.) remain unchanged
+
+
 
 function SettingsTile(props: {
     icon: JSX.Element;
@@ -574,7 +499,7 @@ function RecordModal(props: {
             content={
                 <>
                     {"Record audio using your microphone"}
-                    <AudioRecorder onRecordingComplete={onRecordingComplete} />
+                    {/* <AudioRecorder onRecordingComplete={onRecordingComplete} /> */}
                 </>
             }
             onClose={onClose}

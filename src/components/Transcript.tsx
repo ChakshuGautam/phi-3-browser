@@ -1,5 +1,8 @@
-import { useRef, useEffect, useState } from "react";
+// Transcript.tsx
+import React, { useRef, useEffect, useState } from "react";
 import { TranscriberData } from "../hooks/useTranscriber";
+import TextArea from "./TextArea";
+import ComparisonResult from "./ComparisonResult";
 
 interface Props {
     transcribedData: TranscriberData | undefined;
@@ -43,14 +46,14 @@ export default function Transcript({ transcribedData }: Props) {
             const updatedTranscript = chunks.join(" ").trim();
             setTranscript(updatedTranscript);
 
-            // Scroll to bottom to show the latest transcript
             if (divRef.current) {
                 divRef.current.scrollTop = divRef.current.scrollHeight;
             }
 
-            // Compare transcribed text with verification text (ignoring case)
-            const verificationWords = verificationText.toLowerCase().split(/\s+/);
-            const transcribedWords = updatedTranscript.toLowerCase().split(/\s+/);
+            const normalizeText = (text: string) => text.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "").split(/\s+/);
+
+            const verificationWords = normalizeText(verificationText);
+            const transcribedWords = normalizeText(updatedTranscript);
 
             let resultHTML = "";
 
@@ -67,15 +70,13 @@ export default function Transcript({ transcribedData }: Props) {
     }, [transcribedData, verificationText]);
 
     return (
-        <div className="w-full flex flex-col my-2 p-4 max-h-[20rem] overflow-hidden shadow-md">
-            {transcribedData && (
-                <div className="bg-white rounded-lg">
-                    <p ref={divRef} className="text-black p-4">
-                        {transcript}
-                    </p>
-                </div>
-            )}
-            {transcribedData && !transcribedData.isBusy && (
+        <div className="w-full flex flex-col my-2 p-4 max-h-200rem overflow-hidden shadow-md">
+            <div className="bg-white rounded-lg">
+                <p ref={divRef} className="text-black p-4">
+                    {transcript}
+                </p>
+            </div>
+            {!transcribedData?.isBusy && (
                 <div className="w-full text-right">
                     <button
                         onClick={exportTXT}
@@ -91,16 +92,9 @@ export default function Transcript({ transcribedData }: Props) {
                     </button>
                 </div>
             )}
-            <div className="bg-white text-black rounded-lg mt-4 p-4">
-                <h1 className="font-bold">Text Area</h1>
-                <textarea
-                    value={verificationText}
-                    onChange={handleVerificationTextChange}
-                    className="w-full h-24 border-gray-300 rounded-md p-2 focus:outline-none focus:ring focus:border-blue-300"
-                    placeholder="Enter text for verification..."
-                />
-                <h2 className="text-xl text-black font-bold mb-2">Comparison Result</h2>
-                <div dangerouslySetInnerHTML={{ __html: comparisonResult }} />
+            <TextArea value={verificationText} onChange={handleVerificationTextChange} />
+            <div style={{ marginTop: "1rem" }}>
+                <ComparisonResult comparisonResult={comparisonResult} />
             </div>
         </div>
     );

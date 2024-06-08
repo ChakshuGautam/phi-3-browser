@@ -228,6 +228,7 @@ function Read() {
                     setLanguage(e);
                     recorderRef.current?.start();
                   }} />
+                  <br></br>
                   <button className="border rounded-lg px-2 absolute right-2 mt-2" onClick={() => {
                     recorderRef.current?.stop();
                     recorderRef.current?.start();

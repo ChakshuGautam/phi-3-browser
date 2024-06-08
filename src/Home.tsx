@@ -50,6 +50,19 @@ function Home() {
                 Large-Scale Weak Supervision Resources
                 </p>
               </div>
+            </Link>    <Link to="/read" className="flex items-center w-full p-3 leading-tight transition-all rounded-lg outline-none text-start hover:bg-blue-gray-50 hover:bg-opacity-80 hover:text-blue-gray-900 focus:bg-blue-gray-50 focus:bg-opacity-80 focus:text-blue-gray-900 active:bg-blue-gray-50 active:bg-opacity-80 active:text-blue-gray-900">
+              <div className="grid mr-4 place-items-center">
+                <img alt="whisper" src="./assets/samagra.png"
+                  className="relative inline-block h-12 w-12 !rounded-full object-cover object-center" />
+              </div>
+              <div>
+                <h6 className="block font-sans text-base antialiased font-semibold leading-relaxed tracking-normal text-blue-gray-900">
+                  READ-ALONG
+                </h6>
+                <p className="block font-sans text-sm antialiased font-normal leading-normal text-gray-700">
+             Real Time Read-Along
+                </p>
+              </div>
             </Link>
           </nav>
         </div>
